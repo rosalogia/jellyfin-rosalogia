@@ -1,0 +1,118 @@
+# Maintainer: Ambika Eshwar <ambika@rosalogia.me>
+# Based on the Arch Linux jellyfin-server package by
+# George Rawlinson <grawlinson@archlinux.org> and Giovanni Harting <anonfunc@archlinux.org>
+
+pkgname=jellyfin-server-rosalogia
+_pkgname=jellyfin
+pkgver=12.4.r7.g4750d1086c
+pkgrel=1
+pkgdesc='Jellyfin server backend (rosalogia fork: video clips, Chinese study subtitles)'
+arch=(x86_64)
+url='https://github.com/rosalogia/jellyfin'
+license=(GPL-2.0-or-later)
+depends=(
+  glibc
+  libgcc
+  libstdc++
+  aspnet-runtime-10.0
+  bash
+  sqlite
+  fontconfig
+  jellyfin-ffmpeg
+  jemalloc
+)
+makedepends=(
+  git
+  dotnet-sdk-10.0
+  aspnet-targeting-pack-10.0
+)
+optdepends=(
+  'jellyfin-web-rosalogia: to run web-app on the same machine'
+  'noto-fonts: for text titles in library folders'
+)
+provides=("jellyfin-server=${pkgver%%.r*}")
+conflicts=(jellyfin-server)
+backup=(
+  etc/jellyfin/logging.json
+  etc/jellyfin/jellyfin.env
+)
+options=(!debug)
+# Commit of the fork-stable branch to build; CI updates this on every release.
+_commit=4750d1086c
+source=(
+  "$pkgname::git+$url.git#commit=$_commit"
+  "jellyfin-packaging::git+https://github.com/jellyfin/jellyfin-packaging"
+  sysusers.conf
+  tmpfiles.conf
+  fix-envfile-path.patch
+  use-system-jemalloc.patch
+)
+b2sums=('SKIP'
+        'SKIP'
+        '5aa5e041513db1cd58e4b0dd91b712931be956d0c4e240c92f5183260a55ad48b6d34612b9a22bf49eb9c80418b2437b01f2cfef200f035a3475a0737d6871ea'
+        'bc8001cf28ebf76a125e7ab0d9d5a8fcf35e0def5b907dc5fe90e16cdbb3fdf8b7f098779ced9a44e7a3918ee605058b379d445a224178456a32a6a99cd084b4'
+        '4f63c425fc60e80c36c958674f0bbd704feb79cac9e8d05e76e0bc01d6d3e10555395a45f994e240a68433c01f9a14d5a1db1765eccb7409f11da34161c75ffc'
+        '32019a53b03e548d8f80e8ba602cd83cdfcd0fcc72993c3eaa56072088e1654350b0d283ebe4f2df749fd3c0253586435e1fb57f15b349b7b9d9a70320daca72')
+
+pkgver() {
+  cd "$pkgname"
+
+  # v12.4-7-g4750d10 -> 12.4.r7.g4750d10 (upstream release + fork commits on top)
+  git describe --long --tags --match 'v*' | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g'
+}
+
+prepare() {
+  cd jellyfin-packaging
+
+  # fix envfile path in systemd service
+  patch -p1 -i "$srcdir/fix-envfile-path.patch"
+
+  # use system jemalloc
+  # https://github.com/jellyfin/jellyfin/issues/11588
+  patch -p1 -i "$srcdir/use-system-jemalloc.patch"
+}
+
+build() {
+  cd "$pkgname"
+
+  # disable dotnet telemetry
+  export DOTNET_CLI_TELEMETRY_OPTOUT=1
+  export DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1
+  export DOTNET_NOLOGO=1
+
+  dotnet \
+    publish \
+    Jellyfin.Server \
+    --configuration Release \
+    --output builddir \
+    --self-contained false \
+    --os linux \
+    -p:DebugSymbols=false \
+    -p:DebugType=none
+}
+
+package() {
+  cd "$pkgname"
+
+  # install binaries
+  install -vd "$pkgdir/usr/"{lib,bin}
+  cp -r builddir "$pkgdir/usr/lib/$_pkgname"
+  ln -sf "/usr/lib/$_pkgname/jellyfin" "$pkgdir/usr/bin/jellyfin"
+
+  # ensure binaries have correct permissions
+  chmod 755 "$pkgdir/usr/lib/$_pkgname/jellyfin"
+
+  # use upstream provided packaging files
+  cd "$srcdir/jellyfin-packaging/debian/conf"
+
+  # systemd integration
+  install -vDm644 jellyfin.service -t "$pkgdir/usr/lib/systemd/system"
+  install -vDm644 "$srcdir/sysusers.conf" "$pkgdir/usr/lib/sysusers.d/$_pkgname.conf"
+  install -vDm644 "$srcdir/tmpfiles.conf" "$pkgdir/usr/lib/tmpfiles.d/$_pkgname.conf"
+  # set /etc/jellyfin to 750 according to tmpfiles
+  install -vdm750 "$pkgdir/etc/$_pkgname"
+  install -vDm640 jellyfin "$pkgdir/etc/$_pkgname/$_pkgname.env"
+  install -vDm640 logging.json -t "$pkgdir/etc/$_pkgname"
+}
+
+# vim: ts=2 sw=2 et:

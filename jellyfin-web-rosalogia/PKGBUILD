@@ -1,0 +1,51 @@
+# Maintainer: Ambika Eshwar <ambika@rosalogia.me>
+# Based on the Arch Linux jellyfin-web package by
+# George Rawlinson <grawlinson@archlinux.org> and Giovanni Harting <anonfunc@archlinux.org>
+
+pkgname=jellyfin-web-rosalogia
+pkgver=12.4.r6.g183f5d1d52
+pkgrel=1
+pkgdesc='Web client for Jellyfin (rosalogia fork: video clips, Chinese study subtitles)'
+arch=(any)
+url='https://github.com/rosalogia/jellyfin-web'
+license=(GPL-2.0-or-later)
+makedepends=(
+  git
+  nodejs
+  npm
+)
+provides=("jellyfin-web=${pkgver%%.r*}")
+conflicts=(jellyfin-web)
+# Commit of the fork-stable branch to build; CI updates this on every release.
+_commit=183f5d1d52
+source=("$pkgname::git+$url.git#commit=$_commit")
+b2sums=('SKIP')
+
+pkgver() {
+  cd "$pkgname"
+
+  # v12.4-6-gabcdef0 -> 12.4.r6.gabcdef0 (upstream release + fork commits on top)
+  git describe --long --tags --match 'v*' | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g'
+}
+
+prepare() {
+  cd "$pkgname"
+
+  # download dependencies
+  npm ci --no-audit --no-fund --no-update-notifier
+}
+
+build() {
+  cd "$pkgname"
+
+  npm run build:production
+}
+
+package() {
+  cd "$pkgname"
+
+  install -vd "$pkgdir/usr/share/jellyfin/web"
+  cp -vr dist/* "$pkgdir/usr/share/jellyfin/web"
+}
+
+# vim: ts=2 sw=2 et:
