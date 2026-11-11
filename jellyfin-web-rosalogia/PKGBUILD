@@ -25,7 +25,7 @@ pkgver() {
   cd "$pkgname"
 
   # v12.4-6-gabcdef0 -> 12.4.r6.gabcdef0 (upstream release + fork commits on top)
-  git describe --long --tags --match 'v*' | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g'
+  git describe --long --tags --match 'v*' --exclude '*-rc*' | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g'
 }
 
 prepare() {

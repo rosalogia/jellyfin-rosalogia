@@ -58,7 +58,7 @@ pkgver() {
   cd "$pkgname"
 
   # v12.4-7-g4750d10 -> 12.4.r7.g4750d10 (upstream release + fork commits on top)
-  git describe --long --tags --match 'v*' | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g'
+  git describe --long --tags --match 'v*' --exclude '*-rc*' | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g'
 }
 
 prepare() {

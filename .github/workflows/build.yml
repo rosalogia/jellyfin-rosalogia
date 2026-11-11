@@ -1,0 +1,124 @@
+name: Build packages
+
+on:
+  schedule:
+    - cron: '17 6 * * *'
+  workflow_dispatch:
+    inputs:
+      rebuild:
+        description: Rebuild and republish the packages even if nothing changed
+        type: boolean
+        default: false
+  push:
+    branches: [main]
+    paths:
+      - 'jellyfin-*-rosalogia/**'
+      - 'scripts/**'
+      - '.github/workflows/build.yml'
+
+concurrency:
+  group: build
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.update.outputs.changed }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Rebase fork-stable onto the latest upstream release
+        id: rebase
+        env:
+          FORK_PUSH_TOKEN: ${{ secrets.FORK_PUSH_TOKEN }}
+        run: |
+          scripts/sync-fork.sh jellyfin work/jellyfin
+          scripts/sync-fork.sh jellyfin-web work/jellyfin-web
+
+      # Rebased branches are tested before anything is pushed.
+      - uses: actions/setup-dotnet@v4
+        if: steps.rebase.outputs.rebased == 'true'
+        with:
+          global-json-file: work/jellyfin/global.json
+
+      - name: Test server
+        if: steps.rebase.outputs.rebased == 'true'
+        run: dotnet test work/jellyfin/Jellyfin.sln --configuration Release
+
+      - uses: actions/setup-node@v4
+        if: steps.rebase.outputs.rebased == 'true'
+        with:
+          node-version-file: work/jellyfin-web/.nvmrc
+
+      - name: Check web client
+        if: steps.rebase.outputs.rebased == 'true'
+        working-directory: work/jellyfin-web
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build:check
+
+      - name: Push forks
+        run: |
+          scripts/push-fork.sh work/jellyfin
+          scripts/push-fork.sh work/jellyfin-web
+
+      - name: Point PKGBUILDs at the new commits
+        id: update
+        run: |
+          scripts/update-pkgbuilds.sh work
+          if ! git diff --quiet; then
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git commit -am 'Update to latest fork-stable'
+            git push
+          fi
+
+      - name: Open an issue
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          title='Package update failed'
+          if [ -z "$(gh issue list --state open --search "in:title \"$title\"" --json number --jq '.[].number')" ]; then
+            gh issue create --title "$title" --body "The scheduled update failed, most likely because fork-stable no longer rebases cleanly onto the newest upstream release. The published packages are unchanged.
+
+          Log: $RUN_URL"
+          fi
+
+  build:
+    needs: sync
+    if: needs.sync.outputs.changed == 'true' || github.event_name == 'push' || inputs.rebuild
+    runs-on: ubuntu-latest
+    container: archlinux:base-devel
+    steps:
+      - name: Install tools
+        run: pacman -Syu --noconfirm --needed git github-cli
+
+      - uses: actions/checkout@v4
+        with:
+          # The sync job may have just committed new PKGBUILDs.
+          ref: main
+
+      - name: Build packages
+        run: |
+          useradd --create-home builder
+          echo 'builder ALL=(ALL) NOPASSWD: /usr/bin/pacman' > /etc/sudoers.d/builder
+          chown -R builder .
+          for pkg in jellyfin-server-rosalogia jellyfin-web-rosalogia; do
+            (cd "$pkg" && sudo -u builder makepkg --syncdeps --noconfirm)
+          done
+
+      - name: Publish pacman repository
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+        run: |
+          git config --global --add safe.directory "$PWD"
+          scripts/publish-repo.sh
