@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Build the "rosalogia" pacman repo from the freshly built packages and publish it as the
-# assets of the "repo" GitHub release. Packages are signed when GPG_PRIVATE_KEY is set.
+# assets of the "repo" GitHub release, signing the packages and the database.
 #
-# Env: GH_TOKEN, GH_REPO, optional GPG_PRIVATE_KEY
+# Env: GH_TOKEN, GH_REPO, GPG_PRIVATE_KEY
 set -euo pipefail
 
 repo=rosalogia
@@ -14,16 +14,16 @@ cp ./*/*.pkg.tar.zst out/
 cp rosalogia.asc out/
 cd out
 
-sign=()
-if [[ -n "${GPG_PRIVATE_KEY:-}" ]]; then
-    gpg --batch --import <<< "$GPG_PRIVATE_KEY"
-    for pkg in *.pkg.tar.zst; do
-        gpg --batch --yes --detach-sign "$pkg"
-    done
-    sign=(--sign)
+if [[ -z "${GPG_PRIVATE_KEY:-}" ]]; then
+    echo 'GPG_PRIVATE_KEY is not set; refusing to publish unsigned packages' >&2
+    exit 1
 fi
+gpg --batch --import <<< "$GPG_PRIVATE_KEY"
+for pkg in *.pkg.tar.zst; do
+    gpg --batch --yes --detach-sign "$pkg"
+done
 
-repo-add "${sign[@]}" "$repo.db.tar.gz" ./*.pkg.tar.zst
+repo-add --sign "$repo.db.tar.gz" ./*.pkg.tar.zst
 
 # repo-add makes $repo.db and $repo.files symlinks, which release assets can't be.
 for f in "$repo.db" "$repo.files"; do
