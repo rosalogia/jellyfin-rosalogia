@@ -4,7 +4,7 @@
 
 pkgname=jellyfin-server-rosalogia
 _pkgname=jellyfin
-pkgver=12.4.r7.g4750d1086c
+pkgver=12.4.r8.g4c8f521011
 pkgrel=1
 pkgdesc='Jellyfin server backend (rosalogia fork: video clips, Chinese study subtitles)'
 arch=(x86_64)
@@ -38,7 +38,7 @@ backup=(
 )
 options=(!debug)
 # Commit of the fork-stable branch to build; CI updates this on every release.
-_commit=4750d1086c
+_commit=4c8f521011
 source=(
   "$pkgname::git+$url.git#commit=$_commit"
   "jellyfin-packaging::git+https://github.com/jellyfin/jellyfin-packaging"
