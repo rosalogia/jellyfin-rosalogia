@@ -25,7 +25,9 @@ permissions:
   issues: write
 
 jobs:
+  # Pushes to main only rebuild the commits the PKGBUILDs already pin.
   sync:
+    if: github.event_name != 'push'
     runs-on: ubuntu-latest
     outputs:
       changed: ${{ steps.update.outputs.changed }}
@@ -93,7 +95,9 @@ jobs:
 
   build:
     needs: sync
-    if: needs.sync.outputs.changed == 'true' || github.event_name == 'push' || inputs.rebuild
+    if: >-
+      !failure() && !cancelled() &&
+      (needs.sync.outputs.changed == 'true' || github.event_name == 'push' || inputs.rebuild)
     runs-on: ubuntu-latest
     container: archlinux:base-devel
     steps:

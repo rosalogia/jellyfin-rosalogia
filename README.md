@@ -1,4 +1,8 @@
-# jellyfin-arch
+# jellyfin-rosalogia
+
+> **Unofficial.** This is a personal fork, not affiliated with or endorsed by the Jellyfin
+> project. For official Jellyfin, see [jellyfin.org](https://jellyfin.org) and the Arch
+> `jellyfin-server` / `jellyfin-web` packages.
 
 Arch Linux packages for the rosalogia Jellyfin fork
 ([server](https://github.com/rosalogia/jellyfin), [web](https://github.com/rosalogia/jellyfin-web)),
@@ -20,14 +24,14 @@ Add the repository to `/etc/pacman.conf`:
 
 ```ini
 [rosalogia]
-Server = https://github.com/rosalogia/jellyfin-arch/releases/download/repo
+Server = https://github.com/rosalogia/jellyfin-rosalogia/releases/download/repo
 ```
 
 The packages and the repository database are signed. Import and trust the signing key once
 (fingerprint `D410 B3C6 71BD B225 DA99  CEC3 F761 8AA5 DC3B 70B9`, also in `rosalogia.asc`):
 
 ```sh
-curl -LO https://github.com/rosalogia/jellyfin-arch/releases/download/repo/rosalogia.asc
+curl -LO https://github.com/rosalogia/jellyfin-rosalogia/releases/download/repo/rosalogia.asc
 sudo pacman-key --add rosalogia.asc
 sudo pacman-key --lsign-key D410B3C671BDB225DA99CEC3F7618AA5DC3B70B9
 ```
