@@ -23,14 +23,14 @@ Add the repository to `/etc/pacman.conf`:
 Server = https://github.com/rosalogia/jellyfin-arch/releases/download/repo
 ```
 
-If the packages are signed, import and trust the signing key once:
+The packages and the repository database are signed. Import and trust the signing key once
+(fingerprint `D410 B3C6 71BD B225 DA99  CEC3 F761 8AA5 DC3B 70B9`, also in `rosalogia.asc`):
 
 ```sh
-sudo pacman-key --recv-keys <KEY_ID>   # or: sudo pacman-key --add rosalogia.asc
-sudo pacman-key --lsign-key <KEY_ID>
+curl -LO https://github.com/rosalogia/jellyfin-arch/releases/download/repo/rosalogia.asc
+sudo pacman-key --add rosalogia.asc
+sudo pacman-key --lsign-key D410B3C671BDB225DA99CEC3F7618AA5DC3B70B9
 ```
-
-If they aren't, add `SigLevel = Optional TrustAll` under `[rosalogia]`.
 
 Then install. Pacman offers to remove the conflicting official packages:
 
@@ -58,5 +58,5 @@ picks it up. The workflow can also be run by hand from the Actions tab.
 
 - `FORK_PUSH_TOKEN`: fine-grained token for `rosalogia/jellyfin` and `rosalogia/jellyfin-web`
   with Contents and Workflows read/write.
-- `GPG_PRIVATE_KEY` (optional): ASCII-armored private key used to sign the packages and the
+- `GPG_PRIVATE_KEY`: ASCII-armored private key used to sign the packages and the
   repository database.

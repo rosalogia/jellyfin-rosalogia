@@ -11,6 +11,7 @@ tag=repo
 rm -rf out
 mkdir out
 cp ./*/*.pkg.tar.zst out/
+cp rosalogia.asc out/
 cd out
 
 sign=()
