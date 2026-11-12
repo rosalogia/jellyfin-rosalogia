@@ -32,7 +32,7 @@ jobs:
     outputs:
       changed: ${{ steps.update.outputs.changed }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Rebase fork-stable onto the latest upstream release
         id: rebase
@@ -43,7 +43,7 @@ jobs:
           scripts/sync-fork.sh jellyfin-web work/jellyfin-web
 
       # Rebased branches are tested before anything is pushed.
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v5
         if: steps.rebase.outputs.rebased == 'true'
         with:
           global-json-file: work/jellyfin/global.json
@@ -52,7 +52,7 @@ jobs:
         if: steps.rebase.outputs.rebased == 'true'
         run: dotnet test work/jellyfin/Jellyfin.sln --configuration Release
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         if: steps.rebase.outputs.rebased == 'true'
         with:
           node-version-file: work/jellyfin-web/.nvmrc
@@ -104,7 +104,7 @@ jobs:
       - name: Install tools
         run: pacman -Syu --noconfirm --needed git github-cli
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           # The sync job may have just committed new PKGBUILDs.
           ref: main

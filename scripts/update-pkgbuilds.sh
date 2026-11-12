@@ -4,6 +4,7 @@
 # Usage: update-pkgbuilds.sh <work dir>     (the directory sync-fork.sh cloned into)
 # Prints "changed=true|false" to $GITHUB_OUTPUT when set.
 set -euo pipefail
+trap 'echo "${BASH_SOURCE[0]}:$LINENO: \`$BASH_COMMAND\` failed" >&2' ERR
 
 work=$1
 changed=false

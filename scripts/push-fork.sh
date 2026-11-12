@@ -4,6 +4,7 @@
 #
 # Usage: push-fork.sh <dir>     e.g. push-fork.sh work/jellyfin
 set -euo pipefail
+trap 'echo "${BASH_SOURCE[0]}:$LINENO: \`$BASH_COMMAND\` failed" >&2' ERR
 
 cd "$1"
 

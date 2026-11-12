@@ -4,6 +4,7 @@
 #
 # Env: GH_TOKEN, GH_REPO, GPG_PRIVATE_KEY
 set -euo pipefail
+trap 'echo "${BASH_SOURCE[0]}:$LINENO: \`$BASH_COMMAND\` failed" >&2' ERR
 
 repo=rosalogia
 tag=repo
